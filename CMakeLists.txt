@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -48,11 +49,11 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+#add_message_files(
+#  FILES
+#  Imu.msg
+#  Message2.msg
+#)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -70,8 +71,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
-#   DEPENDENCIES
-#   mav_msgs#   sensor_msgs#   std_msgs
+#  DEPENDENCIES
+#  mav_msgs   sensor_msgs   std_msgs
 # )
 
 ################################################
@@ -105,9 +106,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-#  LIBRARIES uav_comm
-#  CATKIN_DEPENDS mav_msgs roscpp sensor_msgs std_msgs
-#  DEPENDS system_lib
+  LIBRARIES uav_comm
+  CATKIN_DEPENDS mav_msgs roscpp sensor_msgs std_msgs
+  #  DEPENDS system_lib
 )
 
 ###########
