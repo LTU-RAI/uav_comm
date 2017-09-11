@@ -22,6 +22,7 @@
 
 using namespace std;
 
+// Empty IMU message function
 sensor_msgs::Imu empty_imu()
 {
   sensor_msgs::Imu msg;
@@ -52,6 +53,7 @@ sensor_msgs::Imu empty_imu()
   return msg;
 }
 
+// Callback functions for subscribed messages
 void callback_RPY(const mav_msgs::RollPitchYawrateThrustConstPtr& msg)
 {
 }
@@ -70,7 +72,7 @@ int main(int argc, char **argv)
   ros::NodeHandle n;
 
 
-
+// Subcribers and Publishers defined
 
   ros::Subscriber RateT_sub = n.subscribe("/RateT",10,callback_RT, ros::TransportHints().tcpNoDelay());
   ros::Subscriber Act_sub = n.subscribe("/Act",10,callback_A, ros::TransportHints().tcpNoDelay());
@@ -80,7 +82,7 @@ int main(int argc, char **argv)
 
   ros::Rate loop (10);
   int count = 0;
-  while (ros::ok())
+  while (ros::ok())   // Main ROS loop
   {
     sensor_msgs::Imu imu_msg;
     mav_msgs::Status status_msg;
