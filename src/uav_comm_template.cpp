@@ -1,15 +1,24 @@
-#include "uav_comm/uav_comm_template.hpp"
+// System includes
 #include <iostream>
-#include "ros/ros.h"
-#include "std_msgs/String.h"
 #include <sstream>
-#include "sensor_msgs/Imu.h"
-#include "mav_msgs/Status.h"
-#include "ros/transport_hints.h"
-#include "ros/common.h"
-#include "ros/forwards.h"
 #include <boost/lexical_cast.hpp>
+
+// Ros includes
+#include <ros/ros.h>
+#include <ros/transport_hints.h>
 #include <ros/subscribe_options.h>
+
+// Messages
+#include "std_msgs/String.h"
+
+#include "sensor_msgs/Imu.h"
+#include "mav_msgs/RateThrust.h"
+#include "mav_msgs/RollPitchYawrateThrust.h"
+#include "mav_msgs/Status.h"
+#include "mav_msgs/Actuators.h"
+
+// User includes
+#include "uav_comm/uav_comm_template.hpp"
 
 using namespace std;
 
@@ -43,7 +52,15 @@ sensor_msgs::Imu empty_imu()
   return msg;
 }
 
-void callback(mav_msgs::RollPitchYawrateThrust.msg)
+void callback_RPY(const mav_msgs::RollPitchYawrateThrustConstPtr& msg)
+{
+}
+
+void callback_RT(const mav_msgs::RateThrustConstPtr& msg)
+{
+}
+
+void callback_A(const mav_msgs::ActuatorsConstPtr& msg)
 {
 }
 
@@ -52,7 +69,12 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "uav_comm_node");
   ros::NodeHandle n;
 
-  ros::Subscriber RPYrT_sub = n.subscribe("/RPYrT",10,callback(), ros::TransportHints().tcpNoDelay());
+
+
+
+  ros::Subscriber RateT_sub = n.subscribe("/RateT",10,callback_RT, ros::TransportHints().tcpNoDelay());
+  ros::Subscriber Act_sub = n.subscribe("/Act",10,callback_A, ros::TransportHints().tcpNoDelay());
+  ros::Subscriber RPYrT_sub = n.subscribe("/RPYrT",10,callback_RPY, ros::TransportHints().tcpNoDelay());
   ros::Publisher status_pub = n.advertise<mav_msgs::Status>("/status", 5);
   ros::Publisher imu_pub = n.advertise<sensor_msgs::Imu>("/imu", 5);
 
