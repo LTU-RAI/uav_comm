@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   message_generation
+  kfly_comm
 )
 
 ## System dependencies are found with CMake's conventions
@@ -137,7 +138,7 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node
   src/uav_comm_node.cpp
-  src/uav_comm_template.cpp
+  src/uav_comm_kfly.cpp
 )
 
 ## Rename C++ executable without prefix
