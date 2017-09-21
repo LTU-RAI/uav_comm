@@ -107,9 +107,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES uav_comm
+#  # LIBRARIES uav_comm
   CATKIN_DEPENDS mav_msgs roscpp sensor_msgs std_msgs
-  #  DEPENDS system_lib
+#  #  DEPENDS system_lib
 )
 
 ###########

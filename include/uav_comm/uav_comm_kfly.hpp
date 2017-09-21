@@ -4,6 +4,9 @@
 // Ros includes
 #include <ros/ros.h>
 
+// KFly
+#include <kfly_comm/kfly_comm.hpp>
+
 // Messages
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Joy.h>
@@ -16,6 +19,17 @@
 class uav_communication
 {
 private:
+  // KFly
+  kfly_comm::codec kfly_comm_;
+  std::string vehicle_name_;
+  std::string vehicle_type_;
+
+  // Callback functions for KFly subscribed messages
+  void kfly_status(kfly_comm::datagrams::SystemStatus msg);
+  void kfly_strings(kfly_comm::datagrams::SystemStrings msg);
+  void kfly_imu(kfly_comm::datagrams::IMUData msg);
+
+  // ROS
   ros::NodeHandle priv_nh_;
   ros::NodeHandle public_nh_;
 
@@ -27,7 +41,7 @@ private:
   ros::Publisher imu_pub_;
   ros::Publisher rc_pub_;
 
-  // Callback functions for subscribed messages
+  // Callback functions for ROS subscribed messages
   void callback_roll_pitch_yawrate_thrust(
       const mav_msgs::RollPitchYawrateThrustConstPtr& msg);
 
