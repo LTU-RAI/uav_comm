@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(uav_comm)
+project(uav_comm_kfly)
 
 ## Compile as C++14
 add_compile_options(-std=c++14)

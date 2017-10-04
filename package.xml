@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>uav_comm</name>
+  <name>uav_comm_kfly</name>
   <version>0.0.0</version>
   <description>The uav_comm package</description>
   <maintainer email="emifre@todo.todo">emifre</maintainer>

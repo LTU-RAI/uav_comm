@@ -1,6 +1,10 @@
 
 #pragma once
 
+// System includes
+#include <memory>
+#include <vector>
+
 // Ros includes
 #include <ros/ros.h>
 
@@ -22,6 +26,9 @@
 class uav_communication
 {
 private:
+  // Serial comm
+  std::unique_ptr< SerialPipe::SerialBridge > serial_;
+
   // KFly
   kfly_comm::codec kfly_comm_;
   std::string vehicle_name_;
@@ -31,6 +38,7 @@ private:
   void kfly_status(kfly_comm::datagrams::SystemStatus msg);
   void kfly_strings(kfly_comm::datagrams::SystemStrings msg);
   void kfly_imu(kfly_comm::datagrams::IMUData msg);
+  void kfly_raw_imu(kfly_comm::datagrams::RawIMUData msg);
 
   // ROS
   ros::NodeHandle priv_nh_;
@@ -42,6 +50,7 @@ private:
 
   ros::Publisher status_pub_;
   ros::Publisher imu_pub_;
+  ros::Publisher raw_imu_pub_;
   ros::Publisher rc_pub_;
 
   // Callback functions for ROS subscribed messages
