@@ -1,0 +1,4 @@
+[submodule "lib/SerialPipe"]
+	path = lib/SerialPipe
+	url = https://gitlab.com/korken89/SerialPipe.git
+	branch = master

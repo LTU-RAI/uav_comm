@@ -7,6 +7,9 @@
 // KFly
 #include <kfly_comm/kfly_comm.hpp>
 
+// Serial
+#include <serialpipe.h>
+
 // Messages
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Joy.h>

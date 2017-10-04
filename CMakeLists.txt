@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   kfly_comm
+  serial
 )
 
 ## System dependencies are found with CMake's conventions
@@ -108,7 +109,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
 #  # LIBRARIES uav_comm
-  CATKIN_DEPENDS mav_msgs roscpp sensor_msgs std_msgs
+  CATKIN_DEPENDS mav_msgs roscpp sensor_msgs std_msgs serial
 #  #  DEPENDS system_lib
 )
 
@@ -120,6 +121,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
   include
+  lib/SerialPipe
   ${catkin_INCLUDE_DIRS}
 )
 
