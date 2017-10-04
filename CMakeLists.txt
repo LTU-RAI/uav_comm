@@ -109,7 +109,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
 #  # LIBRARIES uav_comm
-  CATKIN_DEPENDS mav_msgs roscpp sensor_msgs std_msgs serial
+  CATKIN_DEPENDS mav_msgs roscpp sensor_msgs std_msgs serial kfly_comm
 #  #  DEPENDS system_lib
 )
 
