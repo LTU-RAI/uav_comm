@@ -38,7 +38,22 @@ void uav_communication::kfly_imu(kfly_comm::datagrams::IMUData msg)
 {
   sensor_msgs::Imu out;
 
-  // out = ...
+  out.orientation_covariance[0] = -1;
+  out.orientation.w             = 1;
+
+  out.angular_velocity.x    = msg.gyroscope[0];
+  out.angular_velocity.y    = msg.gyroscope[1];
+  out.angular_velocity.z    = msg.gyroscope[2];
+  out.linear_acceleration.x = msg.accelerometer[0];
+  out.linear_acceleration.y = msg.accelerometer[1];
+  out.linear_acceleration.z = msg.accelerometer[2];
+
+  out.angular_velocity_covariance[0]    = 0.00016900;
+  out.angular_velocity_covariance[4]    = 0.00016900;
+  out.angular_velocity_covariance[8]    = 0.00016900;
+  out.linear_acceleration_covariance[0] = 0.00688900;
+  out.linear_acceleration_covariance[4] = 0.00688900;
+  out.linear_acceleration_covariance[8] = 0.00688900;
 
   imu_pub_.publish(out);
 }
