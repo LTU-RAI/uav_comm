@@ -33,6 +33,7 @@ private:
   kfly_comm::codec kfly_comm_;
   std::string vehicle_name_;
   std::string vehicle_type_;
+  double gravity_;
 
   // Callback functions for KFly subscribed messages
   void kfly_status(kfly_comm::datagrams::SystemStatus msg);

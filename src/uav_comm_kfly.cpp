@@ -1,6 +1,7 @@
 
 // User includes
 #include "uav_comm/uav_comm_kfly.hpp"
+#include <thread>
 
 //
 // Callback functions for KFly subscribed messages
@@ -9,8 +10,10 @@ void uav_communication::kfly_status(kfly_comm::datagrams::SystemStatus msg)
 {
   mav_msgs::Status out;
 
+  out.header.stamp = ros::Time::now();
+
   out.vehicle_name = vehicle_name_;
-  out.vehicle_name = vehicle_name_;
+  out.vehicle_type = vehicle_type_;
 
   out.battery_voltage           = msg.battery_voltage;
   out.command_interface_enabled = msg.serial_interface_enabled;
@@ -32,11 +35,16 @@ void uav_communication::kfly_strings(kfly_comm::datagrams::SystemStrings msg)
   vehicle_name_ = msg.vehicle_name;
   vehicle_type_ = msg.vehicle_type;
   ROS_INFO("KFly Version: %s", msg.kfly_version);
+  ROS_INFO("     Name:    %s", msg.vehicle_name);
+  ROS_INFO("     Type:    %s", msg.vehicle_type);
 }
 
 void uav_communication::kfly_imu(kfly_comm::datagrams::IMUData msg)
 {
   sensor_msgs::Imu out;
+
+  out.header.stamp    = ros::Time::now();
+  out.header.frame_id = "body";
 
   out.orientation_covariance[0] = -1;
   out.orientation.w             = 1;
@@ -47,9 +55,9 @@ void uav_communication::kfly_imu(kfly_comm::datagrams::IMUData msg)
   out.angular_velocity.x    = msg.gyroscope[0];
   out.angular_velocity.y    = msg.gyroscope[1];
   out.angular_velocity.z    = msg.gyroscope[2];
-  out.linear_acceleration.x = msg.accelerometer[0];
-  out.linear_acceleration.y = msg.accelerometer[1];
-  out.linear_acceleration.z = msg.accelerometer[2];
+  out.linear_acceleration.x = msg.accelerometer[0] * gravity_;
+  out.linear_acceleration.y = msg.accelerometer[1] * gravity_;
+  out.linear_acceleration.z = msg.accelerometer[2] * gravity_;
 
   out.angular_velocity_covariance[0]    = 0.00016900;
   out.angular_velocity_covariance[4]    = 0.00016900;
@@ -64,6 +72,9 @@ void uav_communication::kfly_imu(kfly_comm::datagrams::IMUData msg)
 void uav_communication::kfly_raw_imu(kfly_comm::datagrams::RawIMUData msg)
 {
   sensor_msgs::Imu out;
+
+  out.header.stamp    = ros::Time::now();
+  out.header.frame_id = "body";
 
   out.orientation_covariance[0] = -1;
   out.orientation.w             = 1;
@@ -95,18 +106,95 @@ void uav_communication::callback_roll_pitch_yawrate_thrust(
     const mav_msgs::RollPitchYawrateThrustConstPtr& msg)
 {
   ROS_INFO("Got Roll Pitch Yawrate Thrust command");
+
+  kfly_comm::datagrams::ComputerControlReference ref;
+
+  ref.mode = kfly_comm::enums::FlightMode::ATTITUDE_EULER_MODE;
+
+  if (msg->thrust.z > 1 || msg->thrust.z < 0)
+  {
+    ROS_ERROR(
+        "Got roll_pitch_yawrate_thrust command with throttle outside of "
+        "bounds, "
+        "KFly accepts only normalized thrust on [0 .. 1].");
+
+    return;
+  }
+
 }
 
 void uav_communication::callback_rollrate_pitchrate_yawrate_thrust(
     const mav_msgs::RateThrustConstPtr& msg)
 {
   ROS_INFO("Got Rate Thrust command");
+
+  kfly_comm::datagrams::ComputerControlReference ref;
+
+  ref.mode = kfly_comm::enums::FlightMode::RATE_MODE;
+
+  if (msg->thrust.z > 1 || msg->thrust.z < 0)
+  {
+    ROS_ERROR(
+        "Got rate_thrust command with throttle outside of bounds, "
+        "KFly accepts only normalized thrust on [0 .. 1].");
+
+    return;
+  }
+
 }
 
 void uav_communication::callback_actuator_commanded(
     const mav_msgs::ActuatorsConstPtr& msg)
 {
   ROS_INFO("Got Actuator command");
+
+  if (msg->angles.size() > 0)
+    ROS_ERROR(
+        "Got Actuator command with \"angles\" defined, which is not "
+        "supported.");
+
+  if (msg->angular_velocities.size() > 0)
+    ROS_ERROR(
+        "Got Actuator command with \"angular_velocities\" defined, which is "
+        "not "
+        "supported.");
+
+  if (msg->normalized.size() >= 9)
+    ROS_ERROR(
+        "Got Actuator command with \"normalized\" larger than 8, which is not "
+        "supported.");
+
+  bool valid_command = true;
+  for (auto val : msg->normalized)
+    valid_command = valid_command && !(val > 1 || val < 0);
+
+  if (!valid_command)
+  {
+    ROS_ERROR(
+        "Got Actuator command with \"normalized\" outside of bounds, which is "
+        "not supported. Normalized command must be within [0 .. 1]");
+
+    // Commands must be valid, abort!
+    return;
+  }
+
+  // Fill the KFly data structure for direct motor commands
+  kfly_comm::datagrams::ComputerControlReference ref;
+
+  // Limit to max 8 motors
+  auto size = msg->normalized.size();
+  if (size > 8)
+    size = 8;
+
+  // Set correct mode for this topic
+  ref.mode = kfly_comm::enums::FlightMode::MOTOR_DIRECT_MODE;
+
+  // Fill the motor commands to the data structure
+  for (auto i             = 0; i < size; i++)
+    ref.direct_control[i] = msg->normalized[i] * 65535;  // KFly internal format
+
+  // Send to KFly
+  serial_->serialTransmit(kfly_comm::codec::generate_packet(ref));
 }
 
 uav_communication::uav_communication(ros::NodeHandle& pub_nh,
@@ -150,6 +238,12 @@ uav_communication::uav_communication(ros::NodeHandle& pub_nh,
     imu_rate = 10;
   }
 
+  if (!priv_nh_.getParam("gravity_constant", gravity_))
+  {
+    ROS_WARN("No gravitational constant specified, assuming 9.81 m/s^2.");
+    return;
+  }
+
   priv_nh_.param("publish_raw_imu", publish_raw_imu, false);
   if (!publish_raw_imu)
   {
@@ -158,20 +252,13 @@ uav_communication::uav_communication(ros::NodeHandle& pub_nh,
         "to enable.");
   }
 
-
-
   // Start the serial port
   serial_ = std::unique_ptr< SerialPipe::SerialBridge >(
-      new SerialPipe::SerialBridge(port, baudrate, 1, false)
-    );
+      new SerialPipe::SerialBridge(port, baudrate, 1, false));
 
   // Allow data to start flowing by registering the parsing of serial data
   serial_->registerCallback(
-      [&](const std::vector< uint8_t >& data)
-      {
-        kfly_comm_.parse(data);
-      }
-    );
+      [&](const std::vector< uint8_t >& data) { kfly_comm_.parse(data); });
 
   // Open port
   try
@@ -189,13 +276,15 @@ uav_communication::uav_communication(ros::NodeHandle& pub_nh,
     return;
   }
 
+  // Just for safety, unsubscribe from everything
+  serial_->serialTransmit(kfly_comm::codec::generate_unsubscribe_all());
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
   // ROS
   ratethrust_sub_ = public_nh_.subscribe(
       mav_msgs::default_topics::COMMAND_RATE_THRUST, 5,
       &uav_communication::callback_rollrate_pitchrate_yawrate_thrust, this,
       ros::TransportHints().tcpNoDelay());
-
   actuator_sub_ =
       public_nh_.subscribe(mav_msgs::default_topics::COMMAND_ACTUATORS, 5,
                            &uav_communication::callback_actuator_commanded,
@@ -220,18 +309,29 @@ uav_communication::uav_communication(ros::NodeHandle& pub_nh,
   kfly_comm_.register_callback(this, &uav_communication::kfly_strings);
   kfly_comm_.register_callback(this, &uav_communication::kfly_imu);
 
-
   // Generate KFly subscriptions
-  //_communication->send(codec::generate_command(commands::GetSystemStrings));
-  //_communication->subscribe(kfly_comm::commands::GetSystemStatus, 100);
-  //_communication->subscribe(kfly_comm::commands::GetIMUData, 1000.0 / imu_rate + 0.5);
+  serial_->serialTransmit(kfly_comm::codec::generate_command(
+      kfly_comm::commands::GetSystemStrings));
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  serial_->serialTransmit(kfly_comm::codec::generate_subscribe(
+      kfly_comm::commands::GetSystemStatus, 100));
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  serial_->serialTransmit(kfly_comm::codec::generate_subscribe(
+      kfly_comm::commands::GetIMUData, 1000.0 / imu_rate + 0.5));
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
   if (publish_raw_imu)
   {
-    kfly_comm_.register_callback(this, &uav_communication::kfly_raw_imu);
+    // Generate raw IMU subscription if requested
     raw_imu_pub_ = public_nh_.advertise< sensor_msgs::Imu >(
         std::string(mav_msgs::default_topics::IMU) + "_raw", 1);
-    //_communication->subscribe(kfly_comm::commands::GetRawIMUData, 1000.0 / imu_rate + 0.5);
+
+    kfly_comm_.register_callback(this, &uav_communication::kfly_raw_imu);
+
+    serial_->serialTransmit(kfly_comm::codec::generate_subscribe(
+        kfly_comm::commands::GetRawIMUData, 1000.0 / imu_rate + 0.5));
   }
 
   // All ok

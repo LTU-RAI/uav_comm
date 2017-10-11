@@ -1,0 +1,17 @@
+<launch>
+
+    <node pkg="uav_comm_kfly" name="uav_comm_kfly" type="uav_comm_kfly_node" output="screen">
+
+        <!-- serial port -->
+        <param name="port" value="/dev/ttyACM0" />
+        <param name="baudrate" value="921600" />
+
+        <!-- imu settings -->
+        <param name="imu_hz" value="100" />
+        <param name="gravity_constant" value="9.81" />
+        <param name="publish_raw_imu" value="false" />
+
+    </node>
+
+</launch>
+
