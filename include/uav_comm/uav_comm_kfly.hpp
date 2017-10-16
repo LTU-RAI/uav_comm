@@ -40,6 +40,7 @@ private:
   void kfly_strings(kfly_comm::datagrams::SystemStrings msg);
   void kfly_imu(kfly_comm::datagrams::IMUData msg);
   void kfly_raw_imu(kfly_comm::datagrams::RawIMUData msg);
+  void kfly_rc(kfly_comm::datagrams::RCValues msg);
 
   // ROS
   ros::NodeHandle priv_nh_;

@@ -99,6 +99,14 @@ void uav_communication::kfly_raw_imu(kfly_comm::datagrams::RawIMUData msg)
   raw_imu_pub_.publish(out);
 }
 
+void uav_communication::kfly_rc(kfly_comm::datagrams::RCValues msg)
+{
+  sensor_msgs::Joy out;
+
+  for (int i = 0; i < RCINPUT_N_CHANNELS; i++)
+    out.axes.push_back (msg.calibrated_value[i]);
+  rc_pub_.publish(out);
+}
 //
 // Callback functions for ROS subscribed messages
 //
@@ -121,6 +129,14 @@ void uav_communication::callback_roll_pitch_yawrate_thrust(
     return;
   }
 
+  // Fill ref with msg values
+  ref.attitude_euler.roll     = msg->roll;
+  ref.attitude_euler.pitch    = msg->pitch;
+  ref.attitude_euler.yaw_rate = msg->yaw_rate;
+  ref.attitude_euler.throttle = msg->thrust.z;
+
+  // Send to KFly
+  serial_->serialTransmit(kfly_comm::codec::generate_packet(ref));
 }
 
 void uav_communication::callback_rollrate_pitchrate_yawrate_thrust(
@@ -141,6 +157,14 @@ void uav_communication::callback_rollrate_pitchrate_yawrate_thrust(
     return;
   }
 
+  // Fill ref with msg values
+  ref.rate.roll     = msg->angular_rates.x;
+  ref.rate.pitch    = msg->angular_rates.y;
+  ref.rate.yaw      = msg->angular_rates.z;
+  ref.rate.throttle = msg->thrust.z;
+
+  // Send to KFly
+  serial_->serialTransmit(kfly_comm::codec::generate_packet(ref));
 }
 
 void uav_communication::callback_actuator_commanded(
@@ -281,10 +305,12 @@ uav_communication::uav_communication(ros::NodeHandle& pub_nh,
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
   // ROS
+
   ratethrust_sub_ = public_nh_.subscribe(
       mav_msgs::default_topics::COMMAND_RATE_THRUST, 5,
       &uav_communication::callback_rollrate_pitchrate_yawrate_thrust, this,
       ros::TransportHints().tcpNoDelay());
+
   actuator_sub_ =
       public_nh_.subscribe(mav_msgs::default_topics::COMMAND_ACTUATORS, 5,
                            &uav_communication::callback_actuator_commanded,
@@ -308,6 +334,7 @@ uav_communication::uav_communication(ros::NodeHandle& pub_nh,
   kfly_comm_.register_callback(this, &uav_communication::kfly_status);
   kfly_comm_.register_callback(this, &uav_communication::kfly_strings);
   kfly_comm_.register_callback(this, &uav_communication::kfly_imu);
+  kfly_comm_.register_callback(this, &uav_communication::kfly_rc);
 
   // Generate KFly subscriptions
   serial_->serialTransmit(kfly_comm::codec::generate_command(
@@ -320,6 +347,10 @@ uav_communication::uav_communication(ros::NodeHandle& pub_nh,
 
   serial_->serialTransmit(kfly_comm::codec::generate_subscribe(
       kfly_comm::commands::GetIMUData, 1000.0 / imu_rate + 0.5));
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  serial_->serialTransmit(kfly_comm::codec::generate_subscribe(
+      kfly_comm::commands::GetRCValues, 100));
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
   if (publish_raw_imu)
